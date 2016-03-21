@@ -1,0 +1,138 @@
+---
+title: "Understand the Impact of Weather Events in the US With Respect to Cost and Harm"
+output: html_document
+---
+
+## Synopsis
+The dataset is from the NOAA Storm Database and allows a statistical analysis to be performed on the impact of physical events in the United States with a focus on population health and the economy.
+
+With respect to the different events, tornadoes are, by far, the most dangerous with causing roughly 100.000 injuries in the last 60 years. Other weather events that cause injuries include excessive heat, floods, lightning and thunderstorm/wind storms.
+
+When analyzing the event types by the impact on the economy, we observe that floods caused $150 billion (USD) in damages. Hurricane/typhoons, tornadoes and storm surges followed next in terms of being 2nd, 3rd and 4th with respect to being the most costly weather events.
+
+## Answer the Below 2 Questions
+1. Across the United States, which types of events (as indicated in the 𝙴𝚅𝚃𝚈𝙿𝙴 variable) are most harmful with respect to population health?
+2. Across the United States, which types of events have the greatest economic consequences?
+
+## Data Processing
+
+#### Load relevant libraries into RStudio.
+
+```{r}
+library(plyr)
+library(ggplot2)
+library(reshape2)
+```
+
+#### Load the data after it has been extracted from the original zip file.
+
+```{r}
+event.data <- read.csv("repdata-data-StormData.csv.bz2", stringsAsFactors=FALSE)
+
+event.data <- data.frame(as.Date(event.data$BGN_DATE, "%m/%d/%Y %H:%M:%S"), 
+                         event.data$EVTYPE, 
+                         event.data$FATALITIES, 
+                         event.data$INJURIES,
+                         event.data$PROPDMG,
+                         as.character(event.data$PROPDMGEXP),
+                         event.data$CROPDMG,
+                         as.character(event.data$CROPDMGEXP),
+                         event.data$REFNUM)
+colnames(event.data) <- c("BGN_DATE", "EVTYPE", "FATALITIES", "INJURIES", 
+                          "PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP","REFNUM")
+```
+
+## At this stage, new numeric fields need to be calculated. 
+1. PROPCASH (combines the PROPDMG and PROPDMGEXP fields to create a numeric value)
+2. CROPCASH (combines the CROPDMG and CROPDMGEXP fields to create a numeric value) 3. TOTCASH (combines the PROPCASH and CROPCASH fields to create a numeric value).
+
+#### Ensure that scientific notation is NOT being calculated.
+
+```{r}
+options(scipen=999)
+```
+
+#### Mapping exponents.
+
+```{r}
+tvalues <- c("h","H","k","K","m","M","b","B")
+evalues <- c(10^2,10^2,10^3,10^3,10^6,10^6,10^9,10^9)
+mapped.exponents <- data.frame(tvalues, evalues)
+```
+
+#### Calculating monetary values.
+
+```{r}
+event.data <- merge(mapped.exponents, event.data, 
+                    by.x="tvalues", by.y="PROPDMGEXP", all.y=TRUE)
+names(event.data)[2] <- "prop.exponents"
+event.data$PROPCASH <- event.data$PROPDMG * event.data$prop.exponents
+event.data$PROPCASH[is.na(event.data$PROPCASH)] <- 0
+
+event.data <- merge(mapped.exponents, event.data[,2:11], 
+                    by.x="tvalues", by.y="CROPDMGEXP", all.y=TRUE)
+names(event.data)[2] <- "crop.exponents"
+event.data$CROPCASH <- event.data$CROPDMG * event.data$crop.exponents
+event.data$CROPCASH[is.na(event.data$CROPCASH)] <- 0
+
+event.data$TOTCASH <- event.data$PROPCASH + event.data$CROPCASH
+```
+
+#### Cleaning data frame.
+
+```{r}
+event.data <- event.data[,c(4:7,10:13)]
+```
+
+## Key Results
+
+### Most harmful types of events to US population across the United States.
+
+#### Summarize data around fatalies and injuries based on event. Build data frame.
+
+```{r}
+total.deaths <- ddply(event.data,.(EVTYPE),summarize,FATALITIES=sum(FATALITIES, na.rm=TRUE))
+total.injuries <- ddply(event.data,.(EVTYPE),summarize,INJURIES=sum(INJURIES, na.rm=TRUE))
+
+total <- merge(total.deaths, total.injuries, 
+               by.x="EVTYPE", by.y="EVTYPE", all=TRUE)
+```
+
+#### Segregate only most harmful events.
+
+```{r}
+total <- total[total$FATALITIES > quantile(total$FATALITIES, probs=0.99) |
+                 total$INJURIES > quantile(total$INJURIES, probs=0.99),]
+
+summary <- melt(total, id=c("EVTYPE"), measure.vars=c("FATALITIES","INJURIES"))
+g <- ggplot(summary,
+            aes(x=EVTYPE, 
+                y=value))
+g <- g + geom_bar(fill="#00BFC4", stat="identity")
+g <- g + labs(x = "Event Type") 
+g <- g + labs(y = "# Directly Impacted")
+g <- g + labs(title="Most Harmful Events")
+g <- g + facet_wrap( ~ variable, ncol=1)
+g <- g + theme(plot.title = element_text(lineheight=.8, face="bold"),
+               axis.text.x=element_text(angle=45,vjust=1,hjust=1))
+print(g)
+```
+
+### Determine the costliest types of events.
+
+#### Focus on the events that are greater than the 99th percentile.
+
+```{r}
+economic.total <- ddply(event.data,.(EVTYPE),summarize,TOTCASH=sum(TOTCASH, na.rm=TRUE))
+
+g <- ggplot(economic.total[economic.total$TOTCASH > quantile(economic.total$TOTCASH, probs=0.99),],
+            aes(x=EVTYPE, 
+                y=TOTCASH/10^9))
+g <- g + geom_bar(fill="#00BFC4", stat="identity")
+g <- g + labs(x = "Event Type") 
+g <- g + labs(y = "In Billions (USD)")
+g <- g + labs(title="Most Costly Events")
+g <- g + theme(plot.title = element_text(lineheight=.8, face="bold"),
+               axis.text.x=element_text(angle=45,vjust=1,hjust=1))
+print(g)
+```
