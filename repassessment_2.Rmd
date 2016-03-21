@@ -2,9 +2,11 @@
 
 ### Load libraries.
 
+```[r]
 library(plyr)
 library(ggplot2)
 library(reshape2)
+```
 
 ### Load the data.
 
