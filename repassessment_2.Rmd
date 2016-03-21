@@ -10,6 +10,7 @@ library(reshape2)
 
 ### Load the data.
 
+```[r]
 storm.data <- read.csv("repdata-data-StormData.csv.bz2", stringsAsFactors=FALSE)
 
 storm.data <- data.frame(as.Date(storm.data$BGN_DATE, "%m/%d/%Y %H:%M:%S"), 
@@ -23,16 +24,22 @@ storm.data <- data.frame(as.Date(storm.data$BGN_DATE, "%m/%d/%Y %H:%M:%S"),
                          storm.data$REFNUM)
 colnames(storm.data) <- c("BGN_DATE", "EVTYPE", "FATALITIES", "INJURIES", 
                           "PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP","REFNUM")
+```
 
 ### Do not use scientific notation.
+```[r]
 options(scipen=999)
+```
 
 ### Mapping exponents.
+```[r]
 text.values <- c("h","H","k","K","m","M","b","B")
 exp.values <- c(10^2,10^2,10^3,10^3,10^6,10^6,10^9,10^9)
 map.exponents <- data.frame(text.values, exp.values)
+```
 
 ### Calculating cash values.
+```[r]
 storm.data <- merge(map.exponents, storm.data, 
                     by.x="text.values", by.y="PROPDMGEXP", all.y=TRUE)
 names(storm.data)[2] <- "prop.exponents"
@@ -46,11 +53,15 @@ storm.data$CROPCASH <- storm.data$CROPDMG * storm.data$crop.exponents
 storm.data$CROPCASH[is.na(storm.data$CROPCASH)] <- 0
 
 storm.data$TOTCASH <- storm.data$PROPCASH + storm.data$CROPCASH
+```
 
 ### Cleaning data frame.
+```[r]
 storm.data <- storm.data[,c(4:7,10:13)]
+```
 
 ### Summarize data around fatalies and injuries based on event.
+```[r]
 fatalities.total <- ddply(storm.data,.(EVTYPE),summarize,FATALITIES=sum(FATALITIES, na.rm=TRUE))
 injuries.total <- ddply(storm.data,.(EVTYPE),summarize,INJURIES=sum(INJURIES, na.rm=TRUE))
 
@@ -73,9 +84,10 @@ g <- g + facet_wrap( ~ variable, ncol=1)
 g <- g + theme(plot.title = element_text(lineheight=.8, face="bold"),
                axis.text.x=element_text(angle=45,vjust=1,hjust=1))
 print(g)
+```
 
 ### Determine the costliest types of events.
-
+```[r]
 economic.total <- ddply(storm.data,.(EVTYPE),summarize,TOTCASH=sum(TOTCASH, na.rm=TRUE))
 
 g <- ggplot(economic.total[economic.total$TOTCASH > quantile(economic.total$TOTCASH, probs=0.99),],
@@ -88,3 +100,4 @@ g <- g + labs(title="COSTLIEST EVENTS")
 g <- g + theme(plot.title = element_text(lineheight=.8, face="bold"),
                axis.text.x=element_text(angle=45,vjust=1,hjust=1))
 print(g)
+```
