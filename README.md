@@ -18,8 +18,8 @@ National Climatic Data Center Storm Events FAQ
 The events in the database start in the year 1950 and end in November 2011. In the earlier years of the database there are generally fewer events recorded, most likely due to a lack of good records. More recent years should be considered more complete.
 
 # Review criteria
-Has either a (1) valid RPubs URL pointing to a data analysis document for this assignment been submitted; or (2) a complete PDF file presenting the data analysis been uploaded?
-Is the document written in English?
+* Has either a (1) valid RPubs URL pointing to a data analysis document for this assignment been submitted; or (2) a complete PDF file presenting the data analysis been uploaded?
+* Is the document written in English?
 Does the analysis include description and justification for any data transformations?
 Does the document have a title that briefly summarizes the data analysis?
 Does the document have a synopsis that describes and summarizes the data analysis in less than 10 sentences?
